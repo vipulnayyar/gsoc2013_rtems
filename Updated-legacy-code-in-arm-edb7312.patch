@@ -1,0 +1,90 @@
+From ad4ce28ba8063e320be6449a2e8df21d978f71ad Mon Sep 17 00:00:00 2001
+From: Vipul Nayyar <nayyar_vipul@yahoo.com>
+Date: Mon, 15 Jul 2013 18:09:28 +0530
+Subject: [PATCH] Updated legacy code in arm edb7312
+
+---
+ c/src/lib/libbsp/arm/edb7312/clock/clockdrv.c  | 14 +-------------
+ c/src/lib/libbsp/arm/edb7312/network/network.c | 12 +++++-------
+ 2 files changed, 6 insertions(+), 20 deletions(-)
+
+diff --git a/c/src/lib/libbsp/arm/edb7312/clock/clockdrv.c b/c/src/lib/libbsp/arm/edb7312/clock/clockdrv.c
+index af0448ff7..b5d49d1 100644
+--- a/c/src/lib/libbsp/arm/edb7312/clock/clockdrv.c
++++ b/c/src/lib/libbsp/arm/edb7312/clock/clockdrv.c
+@@ -18,8 +18,7 @@
+   #define CLOCK_DRIVER_USE_FAST_IDLE
+ #endif
+ 
+-void Clock_isr(rtems_irq_hdl_param arg);
+-uint32_t clock_driver_get_nanoseconds_since_last_tick(void);
++void Clock_isr(void * arg);
+ 
+ #define Clock_driver_support_at_tick()                \
+   do {                                                \
+@@ -69,15 +68,4 @@ uint32_t clock_driver_get_nanoseconds_since_last_tick(void);
+     assert(status == RTEMS_SUCCESSFUL);             \
+   } while (0)
+ 
+-/**
+- *  Return the nanoseconds since last tick
+- */
+-uint32_t clock_driver_get_nanoseconds_since_last_tick(void)
+-{
+-  return 0;
+-}
+-
+-#define Clock_driver_nanoseconds_since_last_tick \
+-  clock_driver_get_nanoseconds_since_last_tick
+-
+ #include "../../../shared/clockdrv_shell.h"
+diff --git a/c/src/lib/libbsp/arm/edb7312/network/network.c b/c/src/lib/libbsp/arm/edb7312/network/network.c
+index ce139ec..468fb61 100644
+--- a/c/src/lib/libbsp/arm/edb7312/network/network.c
++++ b/c/src/lib/libbsp/arm/edb7312/network/network.c
+@@ -7,14 +7,13 @@
+ #define CS8900_BASE 0x20000300
+ unsigned int bsp_cs8900_io_base = 0;
+ unsigned int bsp_cs8900_memory_base = 0;
+-cs8900_device *g_cs;
+-void cs8900_isr(rtems_irq_hdl_param unused);
++static void cs8900_isr(void *);
+ 
+ char g_enetbuf[1520];
+ 
+-void cs8900_isr(rtems_irq_hdl_param unused)
++static void cs8900_isr(void *arg)
+ {
+-    cs8900_interrupt(BSP_EINT3, g_cs);
++    cs8900_interrupt(BSP_EINT3, arg);
+ }
+ 
+ /* cs8900_io_set_reg - set one of the I/O addressed registers */
+@@ -64,14 +63,13 @@ unsigned short cs8900_mem_get_reg (cs8900_device *cs, unsigned long reg)
+ void cs8900_attach_interrupt (cs8900_device *cs)
+ {
+     rtems_status_code status = RTEMS_SUCCESSFUL;
+-    g_cs = cs;
+ 
+     status = rtems_interrupt_handler_install(
+         BSP_EINT3,
+         "Network",
+         RTEMS_INTERRUPT_UNIQUE,
+         cs8900_isr,
+-        NULL
++        cs
+     );
+     assert(status == RTEMS_SUCCESSFUL);
+ }
+@@ -83,7 +81,7 @@ void cs8900_detach_interrupt (cs8900_device *cs)
+     status = rtems_interrupt_handler_remove(
+         BSP_EINT3,
+         cs8900_isr,
+-        NULL
++        cs
+     );
+     assert(status == RTEMS_SUCCESSFUL);
+ }
+-- 
+1.7.11.7
+

@@ -1,0 +1,106 @@
+From 1f4321b8fdc0e1e6587a5618719f1ebf6eb9e13e Mon Sep 17 00:00:00 2001
+From: Vipul Nayyar <nayyar_vipul@yahoo.com>
+Date: Wed, 24 Jul 2013 23:19:51 +0530
+Subject: [PATCH] Removed legacy data types from arm
+
+---
+ c/src/lib/libbsp/arm/csb336/console/uart.c    | 16 ++++++++--------
+ c/src/lib/libbsp/arm/csb336/network/network.c |  4 ++--
+ c/src/lib/libbsp/arm/csb337/network/network.c |  4 ++--
+ 3 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/c/src/lib/libbsp/arm/csb336/console/uart.c b/c/src/lib/libbsp/arm/csb336/console/uart.c
+index 0f6388b..d3d8972 100644
+--- a/c/src/lib/libbsp/arm/csb336/console/uart.c
++++ b/c/src/lib/libbsp/arm/csb336/console/uart.c
+@@ -40,10 +40,10 @@ static void _BSP_output_char(char c);
+ static int _BSP_poll_char(void);
+ 
+ #if USE_INTERRUPTS
+-static void imx_uart_tx_isr(rtems_irq_hdl_param);
+-static void imx_uart_rx_isr(rtems_irq_hdl_param);
+-static void imx_uart_isr_on(const rtems_irq_number);
+-static void imx_uart_isr_off(const rtems_irq_number);
++static void imx_uart_tx_isr(void *);
++static void imx_uart_rx_isr(void *);
++static void imx_uart_isr_on(rtems_vector_number);
++static void imx_uart_isr_off(rtems_vector_number);
+ static ssize_t imx_uart_intr_write(int, const char *, size_t);
+ static rtems_vector_number imx_uart_name_transmit(int minor);
+ static rtems_vector_number imx_uart_name_receive(int minor);
+@@ -328,16 +328,16 @@ static int imx_uart_set_attrs(int minor, const struct termios *t)
+ }
+ 
+ #if USE_INTERRUPTS
+-static void imx_uart_isr_on(const rtems_irq_number name)
++static void imx_uart_isr_on(rtems_vector_number name)
+ {
+     MC9328MXL_AITC_INTENNUM = name;
+ }
+-static void imx_uart_isr_off(const rtems_irq_number name)
++static void imx_uart_isr_off(rtems_vector_number name)
+ {
+     MC9328MXL_AITC_INTDISNUM = name;
+ }
+ 
+-static void imx_uart_rx_isr(rtems_irq_hdl_param param)
++static void imx_uart_rx_isr(void * param)
+ {
+     imx_uart_data_t *uart_data = param;
+     char buf[32];
+@@ -351,7 +351,7 @@ static void imx_uart_rx_isr(rtems_irq_hdl_param param)
+     rtems_termios_enqueue_raw_characters(uart_data->tty, buf, i);
+ }
+ 
+-static void imx_uart_tx_isr(rtems_irq_hdl_param param)
++static void imx_uart_tx_isr(void * param)
+ {
+     imx_uart_data_t *uart_data = param;
+     int len;
+diff --git a/c/src/lib/libbsp/arm/csb336/network/network.c b/c/src/lib/libbsp/arm/csb336/network/network.c
+index f93fcc8..b233143 100644
+--- a/c/src/lib/libbsp/arm/csb336/network/network.c
++++ b/c/src/lib/libbsp/arm/csb336/network/network.c
+@@ -39,7 +39,7 @@
+ /* RTEMS event used to start transmit daemon. */
+ #define START_TRANSMIT_EVENT    RTEMS_EVENT_2
+ 
+-static void enet_isr(rtems_irq_hdl_param);
++static void enet_isr(void *);
+ static void enet_isr_on(void);
+ 
+ typedef struct {
+@@ -658,7 +658,7 @@ mc9328mxl_enet_ioctl (struct ifnet *ifp, ioctl_command_t command, caddr_t data)
+ }
+ 
+ /* interrupt handler */
+-static void enet_isr(rtems_irq_hdl_param unused)
++static void enet_isr(void * unused)
+ {
+     uint16_t int_reg;
+ 
+diff --git a/c/src/lib/libbsp/arm/csb337/network/network.c b/c/src/lib/libbsp/arm/csb337/network/network.c
+index 9e0a4be..ba3c524 100644
+--- a/c/src/lib/libbsp/arm/csb337/network/network.c
++++ b/c/src/lib/libbsp/arm/csb337/network/network.c
+@@ -83,7 +83,7 @@
+   /* RTEMS event used to start transmit daemon. */
+   #define START_TRANSMIT_EVENT    RTEMS_EVENT_2
+ 
+-static void at91rm9200_emac_isr (rtems_irq_hdl_param unused);
++static void at91rm9200_emac_isr (void *);
+ static void at91rm9200_emac_isr_on(void);
+ 
+ /* use the values defined in linkcmds for our use of SRAM */
+@@ -826,7 +826,7 @@ at91rm9200_emac_ioctl (struct ifnet *ifp, ioctl_command_t command, caddr_t data)
+ }
+ 
+ /* interrupt handler */
+-static void at91rm9200_emac_isr (rtems_irq_hdl_param unused)
++static void at91rm9200_emac_isr (void * unused)
+ {
+     unsigned long status32;
+ 
+-- 
+1.7.11.7
+
