@@ -1,4 +1,4 @@
 gsoc2013_rtems
 ==============
 
-My work done on RTEMS during GSOC 2013
+My contributions to the RTEMS Project during GSOC 2013.
