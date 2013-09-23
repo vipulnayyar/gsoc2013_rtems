@@ -1,0 +1,36 @@
+
+In order to remove legacy portion of code in most BSPs, the base support for a BSP needs to be modified, so that the generic interrupt framework can work on it. This includes setting up the generic interrupt handler table and a couple of other things.
+
+Some of the rules, features that I observed/formulated are:
+
+1)In order to initialize the generic interrupt handler table at the start,  the bsp_interrupt_initialize() method should be called from bsp_start() which sets up this table to store the ISR addresses, whose size is based on the definition of macros, BSP_INTERRUPT_VECTOR_MIN & BSP_INTERRUPT_VECTOR_MAX in include/bsp.h
+
+2)All the BSP specific interrupt related code should be present in bsp/irq/irq.c. This bsp specific file should contain the following methods:
+
+rtems_status_code bsp_interrupt_facility_initialize() which contains bsp specific interrupt initialization code(Clear Pending interrupts by modifting registers, etc ). This method is called from bsp_interrupt_initialize() in libbsp/shared/src/irq-generic.c
+
+void bsp_interrupt_handler_default() which acts as a fallback handler when no ISR address has been provided corresponding to a vector in the table.
+
+void bsp_interrupt_dispatch() service the ISR by handling any bsp specific code & calling the generic method bsp_interrupt_handler_dispatch() which in turn services the interrupt by running the ISR after looking it up in the table.
+
+rtems_status_code bsp_interrupt_vector_enable() enables interrupts and is called in irq-generic.c while setting up the table.
+
+rtems_status_code bsp_interrupt_vector_disable() disables interrupts and is called in irq-generic.c while setting up the table & during other important stuff.
+
+3)The bsp_interrupt_dispatch() acts as an entry to the interrupt switchboard. Hence the address of this method needs to be stored in a specific address where the bsp branches to at the time of occurrence of an interrupt. BSP specific manual is needed for that kind of info. This step is generally done in assembly written in the bsp/start/start.s file.
+4)The bsp/include/irq.h contains the declarations for any required global functions like bsp_interrupt_dispatch().
+5)The overall irq related files, generic & bsp specific used are :
+
+  1.  Headers installed :
+        libbsp/shared/include/irq-generic.h
+        libbsp/shared/include/irq-info.h
+        bsp/include/irq.h
+
+  2.  Source Files compiled :
+        libbsp/shared/src/irq-default-handler.c
+        libbsp/shared/src/irq-generic.c
+        libbsp/shared/src/irq-info.c
+        libbsp/shared/src/irq-legacy.c
+        libbsp/shared/src/irq-server.c
+        libbsp/shared/src/irq-shell.c
+        bsp/irq/irq.c
