@@ -1,8 +1,6 @@
-#! /bin/bash
 
 # Bash Script to find discrepancies in BSP file organization.
 # Author : Vipul Nayyar <nayyar_vipul@yahoo.com>
-
 
 filename="0"
 # Passing --verbose turns verbose to 1 & gives the whole story, otherwise '0' to give only important stuff.
@@ -12,7 +10,7 @@ faults="0"
 warnings="0"
 flag="0"
 
-calling_path=`pwd`
+calling_path=$(pwd)
 path=""
 
 important="1"
@@ -25,17 +23,18 @@ format="1"
 # Finds all rtems internal functions ( name starting with '_' & type specifier)
 # that are defined in cpukit & libcpu
 function find_rtems_internal(){
-  if [[ $internal_done == "1" ]]; then
+
+  if [[ "$internal_done" == "1" ]]; then
     return
   fi
   echo "Compiling list of RTEMS Internal functions ..."
   internal_files=""
 
-  for k in `find -name *.c`
+  for k in $(find -name *.c)
   do
-    for j in `grep -oE "[a-z|A-Z|0-9|_]+[\ |^][_]+[a-z|A-Z|0-9|_]*[\ ]*\(" $k`
+    for j in $(grep -oE "[a-z|A-Z|0-9|_]+[\ |^][_]+[a-z|A-Z|0-9|_]*[\ ]*\(" $k)
     do
-      if [[ $j == "_"* ]]; then
+      if [[ "$j" == "_"* ]]; then
         j=${j%%\(}
         internal_files="$j $internal_files"
       fi
@@ -43,11 +42,11 @@ function find_rtems_internal(){
     done
   done
 
-  for k in `find ../c/src/lib/libcpu/ -name *.c`
+  for k in $(find ../c/src/lib/libcpu/ -name *.c)
   do
-    for j in `grep -oE "[a-z|A-Z|0-9|_]+[\ |^][_]+[a-z|A-Z|0-9|_]*[\ ]*\(" $k`
+    for j in $(grep -oE "[a-z|A-Z|0-9|_]+[\ |^][_]+[a-z|A-Z|0-9|_]*[\ ]*\(" $k)
     do
-      if [[ $j == "_"* ]]; then
+      if [[ "$j" == "_"* ]]; then
         j=${j%%\(}
         internal_files="$j $internal_files"
       fi
@@ -57,7 +56,7 @@ function find_rtems_internal(){
 
   for k in $internal_files
   do
-    if echo $rtems_internal |grep -q $k ; then
+    if echo $rtems_internal |grep -q "$k" ; then
       echo > /dev/null
     else
       rtems_internal="$k $rtems_internal"
@@ -69,39 +68,40 @@ function find_rtems_internal(){
 
 # Finds all internal functions common in bsp and (cpukit + libcpu)
 function find_bsp_internal(){
+
   bsp_methods=""
   common_internal_methods=""
 
-# Searching for internal functions starting with '_' called(i.e ending with a ';')
-  for i in `find -name *.c`
+  # Searching for internal functions starting with '_' called(i.e ending with a ';')
+  for i in $( find -name *.c )
   do
-    file_contents=`tr -d '\n' < $i | grep -oE "[ |^][_]+[a-z|A-Z|0-9|_]*[ ]*[\n]*\([^;]*\)[ ]*;" | tr -d '\n' `
-
-    for j in `echo "$file_contents" | grep -oE "[_]+[a-z|A-Z|0-9|_]*[ ]*\("`
+    file_contents=$(tr -d '\n' < $i | grep -oE "[ |^][_]+[a-z|A-Z|0-9|_]*[ ]*[\n]*\([^;\{]*\)[ ]*;" | tr -d '\n')
+    for j in $( echo "$file_contents" | grep -oE "[_]+[a-z|A-Z|0-9|_]*[ ]*\(" )
     do
-      if `echo "$bsp_methods" |grep -q "${j%%\(}"` ; then
+      if $(echo "$bsp_methods" | grep -q "${j%%\(}") ; then
         echo > /dev/null
       else
         bsp_methods="${j%%\(} $bsp_methods"
       fi
+
     done
   done
 
-# Identifying common fucntions between $rtems_interval & $bsp_methods
+  # Identifying common fucntions between $rtems_interval & $bsp_methods
   for i in $rtems_internal
   do
-    if [[ $i == "__asm__" || $i == "__attribute__" || $i == "__volatile__" || $i == "__"* ]];then
+    if [[ "$i" == "__asm__" || "$i" == "__attribute__" || "$i" == "__volatile__" || "$i" == "__"* ]];then
       continue
     fi
     for j in $bsp_methods
     do
-      if [[ $i == $j ]]; then
+      if [[ "$i" == "$j" ]]; then
         common_internal_methods="$j $common_internal_methods"
       fi
     done
   done
 
-  if [[ $common_internal_methods != "" ]]; then
+  if [[ "$common_internal_methods" != "" ]]; then
     echo -e "$bsp : RTEMS Internal functions used : \c"
     for i in $common_internal_methods
     do
@@ -111,10 +111,10 @@ function find_bsp_internal(){
   fi
 }
 
-
 # Passing 1 initially to any check function states that the file/method/header
 # being checked is of critical nature
 function check_file(){
+
   filename="0"
   if [[ $1 == 1 ]]; then
     important="1"
@@ -123,27 +123,27 @@ function check_file(){
     important="0"
   fi
 
-#Grabbing the path of file being evaluated from Makefile.am
+  #Grabbing the path of file being evaluated from Makefile.am
   if grep -wqE "[ ]*[^\ ]*/($1)" Makefile.am ; then
-    file_path=`grep -woE "[ ]*[^\ ]*/($1)" Makefile.am | head --lines=1`
-    cd `dirname $file_path`
-    filename=$1
-    file_path=`pwd`
+    file_path="$(grep -woE "[ ]*[^\ ]*/($1)" Makefile.am | head --lines=1)"
+    cd "$(dirname $file_path)"
+    filename="$1"
+    file_path="$(pwd)"
 
     cd - > /dev/null
     shift
 
-# Checking if file lies in correct directory path
-    for i in $*
+  # Checking if file lies in correct directory path
+    for i in $@
     do
-      if [[ -d $i ]]; then
-        cd $i
+      if [[ -d "$i" ]]; then
+        cd "$i"
       else
         continue
       fi
 
 
-      if [[ "$file_path" == `pwd` ]]; then
+      if [[ "$file_path" == $(pwd) ]]; then
         filename="$file_path/$filename"
         cd - >/dev/null
         return
@@ -167,6 +167,7 @@ function check_file(){
 
 # Checking presence of functions in specific files
 function check_methods(){
+
   if [[ $1 == 1 ]]; then
     important="1"
     shift
@@ -174,31 +175,31 @@ function check_methods(){
     important="0"
   fi
 
-  for i in $*
+  for i in $@
   do
 
-# When correct file for this function does not exist
-    if [[ $filename == "0" ]];then
+  # When correct file for this function does not exist
+    if [[ "$filename" == "0" ]];then
       if grep -rqlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" * ;then
          if [[ $warnings -eq "1" || $important -eq "1" || $verbose -eq "1" ]];then
-          echo $bsp : ${i%(*}"()" present in file `grep -rlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" *`
+          echo $bsp : ${i%(*}"()" present in file $(grep -rlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" *)
          fi
       fi
     else
 
-# When correct file for this function exists
-      if grep -Eq "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" $filename ; then
+  # When correct file for this function exists
+      if grep -Eq "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" "$filename" ; then
         if [[ $verbose -eq "1" ]] ;then
-          echo "$bsp : `basename $filename` : ${i%(*}() present in file"
+          echo "$bsp : $(basename $filename) : ${i%(*}() present in file"
         fi
       else
         if grep -rqlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" * ;then
            if [[ $warnings -eq "1" || $important -eq "1" || $verbose -eq "1" ]];then
-            echo $bsp : ${i%(*}"()" present in file `grep -rlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" *`
+            echo $bsp : ${i%(*}"()" present in file $(grep -rlE "[a-z|A-Z|0-9|_]+[ ]*$i[ ]*\(" *)
            fi
         else
           if [[ $warnings -eq "1" || $important -eq "1" || $verbose -eq "1" ]]; then
-            echo "$bsp : `basename $filename` : ${i%(*}() function does not exist in $filename "
+            echo "$bsp : $(basename $filename) : ${i%(*}() function does not exist in $filename "
             flag="1"
           fi
             faults="1"
@@ -211,6 +212,7 @@ function check_methods(){
 
 # Checking presence of headers installed by bsp
 function check_header(){
+
   if [[ $1 == 1 ]]; then
     important="1"
     shift
@@ -218,15 +220,15 @@ function check_header(){
     important="0"
   fi
 
-  for i in $*
+  for i in $@
   do
     if  grep -wq "$i" Makefile.am ;then
       if [[ ! -f "$i" && ! -f "${i}.in" ]] ;then
         continue
       fi
       if [[ $verbose -eq "1" ]] ;then
-        cd `dirname $i`
-        echo "$bsp : `basename $i` installed from directory" ${PWD##*/c/src/lib/}
+        cd $(dirname $i)
+        echo "$bsp : $(basename $i) installed from directory" ${PWD##*/c/src/lib/}
         cd - > /dev/null
       fi
       return
@@ -234,80 +236,77 @@ function check_header(){
   done
 
   if [[ $warnings -eq "1" || $important -eq "1" || $verbose -eq "1" ]]; then
-    echo "${bsp%%[\ ]*} : `basename $1` not installed "
+    echo "${bsp%%[\ ]*} : $(basename $1) not installed "
     flag="1"
   fi
   filename="0"
   faults="1"
   return
-
 }
 
-test_its_there()
-{
-  if [ $# -ne 2 ] ; then
+function test_its_there(){
+
+  if [[ $# -ne 2 ]]; then
     echo Usage: $0 FILE pattern
   fi
   grep ${2} ${1} >/dev/null
-  if [ $? -ne 0 ] ; then
+  if [[ $? -ne 0 ]]; then
     echo "$bsp : ${2} is NOT in ${1##./}"
   fi
-
 }
 
-test_its_there_all_case()
-{
-  if [ $# -ne 2 ] ; then
+function test_its_there_all_case(){
+
+  if [[ $# -ne 2 ]]; then
     echo Usage: $0 FILE pattern
   fi
   grep -i ${2} ${1} >/dev/null
-  if [ $? -ne 0 ] ; then
+  if [[ $? -ne 0 ]]; then
     echo "$bsp : ${2} is NOT in ${1##./} - case independent check"
   fi
-
 }
 
-test_its_NOT_there_all_case()
-{
-  if [ $# -lt 2 ] ; then
+function test_its_NOT_there_all_case(){
+
+  if [[ $# -lt 2 ]]; then
     echo Usage: $0 FILE pattern
   fi
   FILE=$1
   shift
   grep -i "${*}" ${FILE} >/dev/null
-  if [ $? -eq 0 ] ; then
+  if [[ $? -eq 0 ]]; then
     echo "$bsp : (${*}) SHOULD NOT BE IN ${FILE##./} - case independent check"
   fi
 }
 
-test_its_NOT_there()
-{
-  if [ $# -lt 2 ] ; then
+function test_its_NOT_there(){
+
+  if [[ $# -lt 2 ]]; then
     echo Usage: $0 FILE pattern
   fi
   FILE=$1
   shift
   grep "${*}" ${FILE} >/dev/null
-  if [ $? -eq 0 ] ; then
+  if [[ $? -eq 0 ]]; then
     echo "$bsp : (${*}) SHOULD NOT BE IN ${FILE##./}"
   fi
 }
 
-find_source()
-{
+function find_source(){
+
   findArgs=
   while getopts "cCdm" OPT
   do
-   case "$OPT" in
-     c) findArgs="${findArgs} -o -name configure.ac" ;;
-     C) findArgs="${findArgs} -o -name *.cfg" ;;
-     d) findArgs="${findArgs} -o -name *.doc" ;;
-     m) findArgs="${findArgs} -o -name Makefile.am" ;;
-     *) echo "bad arg to find_source ($OPT)" ; exit 1 ;;
-   esac
+    case "$OPT" in
+      c) findArgs="${findArgs} -o -name configure.ac" ;;
+      C) findArgs="${findArgs} -o -name *.cfg" ;;
+      d) findArgs="${findArgs} -o -name *.doc" ;;
+      m) findArgs="${findArgs} -o -name Makefile.am" ;;
+      *) echo "bad arg to find_source ($OPT)" ; exit 1 ;;
+    esac
   done
 
-  shiftcount=`expr $OPTIND - 1`
+  shiftcount=$(expr $OPTIND - 1)
   shift $shiftcount
 
   args=$*
@@ -322,16 +321,16 @@ function check_format(){
   find_source -m -c -C | while read f
   do
     grep  ".\{81,\}" ${f} >/dev/null
-    if [ $? -eq 0 ] ; then
+    if [[ $? -eq 0 ]]; then
       echo -e "\n$bsp : ${f#./} has more than 80 character lines"
-      for i in `grep -n '.\{80,\}' ${f} | cut -f1 -d:`
+      for i in $(grep -n '.\{80,\}' ${f} | cut -f1 -d:)
       do
         echo -e "$i \c"
-    done
+      done
     fi
   done
 
-  # really need to make the copyright strings consistent in BSPs
+  # Copyright strings should be consistent in BSPs
   echo -e "\n=== Checking for copyright notices"
   find_source | while read f
   do
@@ -356,7 +355,7 @@ function check_format(){
   echo "=== Checking for spaces at the end of lines"
   find_source -m -c -C | while read f
   do
-    egrep " +$" $f >/dev/null
+    grep -E " +$" $f >/dev/null
     test $? -eq 0 && echo -e "${f##./} \c"
   done
 
@@ -395,36 +394,36 @@ function main(){
   fi
 
   # We do not want stdio in a BSP
-    echo "=== Checking for stdio"
-    find_source -m -c -C | while read f
-    do
-      test_its_NOT_there ${f} printf
-      test_its_NOT_there ${f} "puts("
-    done
+  echo "=== Checking for stdio"
+  find_source -m -c -C | while read f
+  do
+    test_its_NOT_there ${f} printf
+    test_its_NOT_there ${f} "puts("
+  done
 
-    # BSPs should include RTEMS_BSP_CLEANUP_OPTIONS and maybe
-    #   RTEMS_BSP_BOOTCARD_OPTIONS
-    if [ -r configure.ac ] ; then
-      echo "=== Checking for RTEMS_BSP_BOOTCARD_OPTIONS in BSP configure.ac"
-      test_its_NOT_there configure.ac RTEMS_BSP_BOOTCARD_OPTIONS
-      echo "=== Checking for RTEMS_BSP_CLEANUP_OPTIONS in BSP configure.ac"
-      test_its_there configure.ac RTEMS_BSP_CLEANUP_OPTIONS
-    fi
+  # BSPs should include RTEMS_BSP_CLEANUP_OPTIONS and maybe
+  #   RTEMS_BSP_BOOTCARD_OPTIONS
+  if [[ -r configure.ac ]]; then
+    echo "=== Checking for RTEMS_BSP_BOOTCARD_OPTIONS in BSP configure.ac"
+    test_its_NOT_there configure.ac RTEMS_BSP_BOOTCARD_OPTIONS
+    echo "=== Checking for RTEMS_BSP_CLEANUP_OPTIONS in BSP configure.ac"
+    test_its_there configure.ac RTEMS_BSP_CLEANUP_OPTIONS
+  fi
 
-    # If not using -O2, then we really want to know
-    # BSPs should normally use -O2
-    echo "=== Checking for not using -O2"
-    grep -H "\-O[013456789]" make/custom/*.cfg
+  # If not using -O2, then we really want to know
+  # BSPs should normally use -O2
+  echo "=== Checking for not using -O2"
+  grep -H "\-O[013456789]" make/custom/*.cfg
 
-    # BSPs should not turn on extra warnings
-    echo "=== Checking for turning on extra GCC warning checks"
-    grep -H "\-W" make/custom/*.cfg
+  # BSPs should not turn on extra warnings
+  echo "=== Checking for turning on extra GCC warning checks"
+  grep -H "\-W" make/custom/*.cfg
 
-    # Hopefully have some output from the tmtests
-    echo "=== Checking for timing information"
-    c=`ls -1 times* 2>/dev/null | wc -l`
-    if [ ${c} -eq 0 ] ; then
-      echo "Please run the timing tests and include the results."
+  # Hopefully have some output from the tmtests
+  echo "=== Checking for timing information"
+  c=$(ls -1 times* 2>/dev/null | wc -l)
+  if [[ ${c} -eq 0 ]]; then
+    echo "Please run the timing tests and include the results."
   fi
 
   echo -e "\n=== Starting BSP Unified way checks"
@@ -435,10 +434,10 @@ function main(){
   if [[ $filename != "0" ]];then
     if grep -wq "start" "$filename" || grep -wq "_start" "$filename"; then
       if [[ $verbose -eq "1" ]] ;then
-        echo "$bsp : `basename $filename` start() present in $filename"
+        echo "$bsp : $(basename $filename) start() present in $filename"
       fi
     else
-      echo "$bsp : `basename $filename` start() does not exist in start.S"
+      echo "$bsp : $(basename $filename) start() does not exist in start.S"
     fi
   fi
 
@@ -447,7 +446,6 @@ function main(){
 
   check_file 1 bspreset.c ../../shared/ ../shared/ startup/
   check_methods 1 "bsp_reset"
-
 
   check_file 1 bootcard.c ../../shared/
   check_header ../../shared/include/bootcard.h
@@ -458,7 +456,6 @@ function main(){
   check_file 1 bspgetworkarea.c ../../shared/ ../../shared/startup ../shared/ ../shared/startup/ startup/
   check_methods 1 "bsp_work_area_initialize"
 
-
   check_file 1 bsplibc.c ../../shared/
   check_methods "bsp_libc_init"
 
@@ -468,12 +465,10 @@ function main(){
   check_file 1 bsppredriverhook.c ../../shared/ ../shared/startup/ startup/
   check_methods "bsp_predriver_hook"
 
-
   check_file gnatinstallhandler.c ../../shared/
 
   check_file sbrk.c ../../shared/ ../../shared/ startup/
   check_methods "sbrk"
-
 
   check_file stackalloc.c ../../shared/src/
   check_methods "bsp_stack_allocate_init" "bsp_stack_allocate" "bsp_stack_free"
@@ -486,9 +481,7 @@ function main(){
   check_header 1 include/irq.h
 
   # PIC Support
-
   check_file irq-default-handler.c ../../shared/src/
-
   check_file 1 irq-generic.c ../../shared/src/
   check_header 1 ../../shared/include/irq-generic.h
 
@@ -503,7 +496,6 @@ function main(){
   check_file rtc-config.c rtc/
   check_methods "bsp_rtc_initialize" "bsp_rtc_get_time" "bsp_rtc_set_time" "bsp_rtc_probe"
 
-
   check_file 1 tod.c ../../shared/ tod/
 
   # Benchmark Timers
@@ -512,7 +504,6 @@ function main(){
 
 
   # Standard Headers
-
   check_header 1 include/bsp.h
   check_header include/bspopts.h
   check_header 1 ../../shared/include/coverhd.h include/coverhd.h
@@ -530,86 +521,87 @@ function main(){
     echo -e "\n"
   fi
 
-  #
-# Test specific checks
-#
-  if [ ${do_test} == "1" ] ; then
+  # Test specific checks
+  if [[ ${do_test} == "1" ]]; then
 
     echo -e "\n=== Starting Test specific checks"
     # find all the Makefile.am's with rtems_tests_PROGRAMS in them
-    Makefiles=`find . -name Makefile.am | xargs -e grep -l ^rtems_tests`
-    if [ "X${Makefiles}" = "X" ] ; then
+    Makefiles=$(find . -name Makefile.am | xargs -e grep -l ^rtems_tests)
+    if [[ "X${Makefiles}" = "X" ]]; then
       echo -e "Unable to locate any test Makefile.am files.\n"
       return
     fi
+
     echo "=== Checking for missing test support files"
     for m in ${Makefiles}
     do
-      directory=`dirname ${m}`
-      if [ ${directory} = "." ] ; then
-        directory=`pwd`
+      directory=$(dirname ${m})
+      if [[ ${directory} = "." ]]; then
+        directory=$(pwd)
       fi
-      testName=`basename ${directory}`
+      testName=$(basename ${directory})
       # Does this test have a .doc file?
-      if [ ! -r ${directory}/${testName}.doc ] ; then
+      if [[ ! -r ${directory}/${testName}.doc ]]; then
         echo ${testName}.doc is not present
       fi
+
       case ${directory} in
-        */*tmtests*) ;;
-        *)
-          # Does this test have a .scn file?
-          if [ ! -r ${directory}/${testName}.scn ] ; then
-            echo ${testName}.scn is not present
-          fi
-          ;;
+      */*tmtests*) ;;
+      *)
+        # Does this test have a .scn file?
+        if [[ ! -r ${directory}/${testName}.scn ]]; then
+        echo ${testName}.scn is not present
+        fi
+      ;;
       esac
     done
-
   fi
 }
 
 # Verifying if the directory given or pwd is a valid bsp, shared architecture, or libbsp directory
 function check_given_dir(){
-  if echo $cur_dir | grep -Eq "c/src/lib/libbsp/([^/]+)/([^/]+)/([^/]+)*" ; then
+
+  if echo "$cur_dir" | grep -Eq "c/src/lib/libbsp/([^/]+)/([^/]+)/([^/]+)*" ; then
     return 0
 
-  elif echo $cur_dir | grep -Eq "c/src/lib/libbsp/([^/]+)/([^/]+)" ; then
-# BSP given
-    bsp=${cur_dir##*/}
+  elif echo "$cur_dir" | grep -Eq "c/src/lib/libbsp/([^/]+)/([^/]+)" ; then
+    # BSP given
+    bsp="${cur_dir##*/}"
 
-    if [[ $bsp == "shared" || $bsp == "autom4te.cache" || $bsp == "no_bsp" ]]; then
+    if [[ "$bsp" == "shared" || "$bsp" == "autom4te.cache" || "$bsp" == "no_bsp" ]]; then
       return 0
     else
       main
     fi
-  elif echo $cur_dir | grep -Eq "c/src/lib/libbsp/([^/]+)" ; then
-# Shared architecture given
-    for i in *
+  elif echo "$cur_dir" | grep -Eq "c/src/lib/libbsp/([^/]+)" ; then
+    # Shared architecture given
+    for i in */Makefile.am
     do
-      if [[ -d $i ]]; then
-        if [[ $i == "shared" || $i == "autom4te.cache" || $i == "no_bsp" ]]; then
-          echo -n
+      i="$(dirname $i)"
+      if [[ -d "$i" ]]; then
+        if [[ "$i" == "shared" || "$i" == "autom4te.cache" || "$i" == "no_bsp" ]]; then
+          echo -n > /dev/null
         else
-          bsp=$i
+          bsp="$i"
 
-          cd $bsp
+          cd "$bsp"
           main
           cd .. > /dev/null
         fi
       fi
     done
-  elif echo $cur_dir | grep -Eq "c/src/lib/libbsp" ; then
-# libbsp given
+  elif echo "$cur_dir" | grep -Eq "c/src/lib/libbsp" ; then
+    # libbsp given
     for i in */*/Makefile.am
     do
-      i=`dirname $i`
-      if [[ -d $i ]]; then
-        if [[ $i == "shared" || $i == "autom4te.cache" || $i == "no_cpu/no_bsp" ]]; then
+      i="$(dirname $i)"
+      if [[ -d "$i" ]]; then
+        if [[ "$i" == "shared" || "$i" == "autom4te.cache" || "$i" == "no_cpu/no_bsp" ]]; then
           echo -n
         else
-          bsp=$i
+          bsp="$i"
 
-          cd $bsp
+          cd "$bsp"
           main
           cd ../../ > /dev/null
         fi
@@ -624,67 +616,71 @@ function check_given_dir(){
 # Evaluating Command Line Arguments
 function start(){
 
-  for i in $*
+  path="0"
+
+  for i in "$@"
   do
-    case $i in
-      "--verbose") verbose="1" # The whole story
-      ;;
+    case "$i" in
 
-      "--warnings") warnings="1" # All warnings
-              verbose="0"
-      ;;
+    "--verbose") # The whole story
+      verbose="1"
+    ;;
 
-      "--no_format") format="0" # Disabling format checks
-              verbose="0"
-      ;;
+    "--warnings") # All warnings
+      warnings="1"
+      verbose="0"
+    ;;
 
-      "--tests") do_test="1"    # Enabling check of tests
-             verbose="0"
-      ;;
+    "--no_format") # Disabling format checks
+      format="0"
+      verbose="0"
+    ;;
 
-      "--help") echo "Help to be provided"
-      ;;
+    "--tests") # Enabling check of tests
+      do_test="1"
+      verbose="0"
+    ;;
 
-      "--"* | "-"* ) echo "Invalid options provided"
-      ;;
+    "--help")
+      echo "Help to be provided"
+    ;;
 
-      *) path="$path $i"  ;; # If not above options, then assumed to be a path for bsp
+    "--"* | "-"* )
+      echo "Invalid options provided"
+    ;;
+
+    *)
+      if [[ -d "$i" ]]; then   # If not above options, then assumed to be a path for bsp
+        echo > /dev/null
+      else
+        echo "$i is an invalid directory."
+      fi
+
+      cd "$i"
+      cur_dir=$(pwd)
+      check_given_dir
+      if [[ $? -eq 1 ]];then
+        echo "$i does not seem a valid RTEMS directory"
+      else
+        path="1"
+      fi
+      cd "$calling_path"
+    ;;
     esac
   done
 
-# No path given, search for bsp from pwd
-  if [[ -z $path ]];then
-    path=$PWD
-    cur_dir=`pwd`
+  # No path given, search for bsp from pwd
+  if [[ "$path" == "0" ]];then
+    cur_dir=$(pwd)
     check_given_dir
     if [[ $? -eq 1 ]];then
       echo "Current directory does not seem a valid RTEMS directory"
     fi
-
-  else
-    for i in $path
-    do
-      if [[ -d $i ]]; then
-        echo > /dev/null
-      else
-        echo "$i is an invalid directory."
-        continue
-      fi
-
-      cd $i
-      cur_dir=`pwd`
-      check_given_dir
-      if [[ $? -eq 1 ]];then
-        echo "$i does not seem a valid RTEMS directory"
-      fi
-      cd $calling_path
-
-    done
   fi
 }
 
 # Let the Game begin !!
-start $*
+start "$@"
 
 # End of Checks
 if [[ $faults -eq "0" ]] ; then
